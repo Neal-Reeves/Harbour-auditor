@@ -1,3 +1,4 @@
+import os
 import pandas as pd
 from bs4 import BeautifulSoup
 from dataclasses import dataclass
@@ -10,6 +11,10 @@ EMAIL_COLUMN = 4
 PROJECT_END_COLUMN = 11
 SUPERVISOR_NAME_COLUMN = 3
 SUPERVISOR_EMAIL_COLUMN = None
+
+SOURCE_URL = ""
+TRACKER_URL = ""
+OUTPUT_DIR = "/outputs/audit_tables"
 
 @dataclass
 class PortalUser:
@@ -100,3 +105,25 @@ def compare_user_lists(source_table, tracker_table):
     ]
 
     return approved, no_longer_at_ucl, access_not_needed
+
+tracker = open_tracker(TRACKER_URL)
+all_of_us_users = all_of_us_parser(SOURCE_URL)
+tracker_users = extract_tracker_users(tracker)
+approved, no_longer_at_ucl, access_not_needed = compare_user_lists(all_of_us_users, tracker_users)
+
+audit_reports = {
+    "approved_users.csv": approved,
+    "left_UCL.csv": no_longer_at_ucl,
+    "expired_projects.csv": access_not_needed
+}
+
+for filename, df in audit_reports.items():
+    export_df = df.copy()
+
+    export_df = export_df.drop(columns=["_merge"])
+
+    file_path = os.path.join(OUTPUT_DIR, filename)
+
+    export_df.to_csv(file_path, index=False)
+    print(f"Successfully generated report: {filename}")
+
