@@ -76,3 +76,27 @@ def extract_tracker_users(tracker):
     
     return pd.DataFrame(tracker_users)
 
+def compare_user_lists(source_table, tracker_table):
+    source_table["email"] = source_table["email"].str.strip().lower()
+    tracker_table["email"] = tracker_table["email"].str.strip().lower()
+
+    audit_frame = pd.merge(
+        source_table,
+        tracker_table,
+        on="email",
+        how="outer",
+        indicator=True
+    )
+
+    approved = audit_frame[audit_frame["_merge"] == "both"]
+    no_longer_at_ucl = audit_frame[audit_frame["_merge"] == "right_only"]
+    
+    today = pd.to_datetime("today")
+    audit_frame["project_end_date"] = pd.to_datetime(audit_frame["project_end_date"])
+
+    access_not_needed = audit_frame[
+        (audit_frame["_merge"] == "both") &
+        (audit_frame["project_end_date"] < today)
+    ]
+
+    return approved, no_longer_at_ucl, access_not_needed
