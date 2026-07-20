@@ -1,9 +1,14 @@
 import os
+import io
+from dotenv import load_dotenv
 import pandas as pd
 from bs4 import BeautifulSoup
 from dataclasses import dataclass
 from typing import Optional
 from datetime import date
+from office365.sharepoint.client_context import ClientContext
+
+load_dotenv()
 
 #Column Details
 NAME_COLUMN = 1
@@ -15,6 +20,11 @@ SUPERVISOR_EMAIL_COLUMN = None
 SOURCE_URL = ""
 TRACKER_URL = ""
 OUTPUT_DIR = "/outputs/audit_tables"
+
+DOMAIN_NAME = os.environ.get("UCL_DOMAIN_NAME")
+SITE_URL = os.environ.get("SHAREPOINT_SITE_URL")
+CLIENT_ID = os.environ.get("SHAREPOINT_CLIENT_ID")
+FILE_URL = os.environ.get("TRACKER_FILE_URL")
 
 @dataclass
 class PortalUser:
@@ -40,7 +50,16 @@ class AuditOutput:
     supervisor_email: Optional[str] = None
 
 def open_tracker(tracker_url):
-    return pd.read_excel(tracker_url)
+    print("Initialising connection to SharePoint")
+
+    client = ClientContext(SITE_URL).with_interactive(
+        tenant= DOMAIN_NAME,
+        client_id = CLIENT_ID
+    )
+    print("Streaming tracker data to memory...")
+    response = client.web.get_file_by_server_relative_url(FILE_URL).download().execute_query()
+
+    return pd.read_excel(io.BytesIO(response.content))
 
 def all_of_us_parser(html_file_path):
     #Parses All of Us HTML report to extract active users
