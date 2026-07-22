@@ -144,8 +144,8 @@ def run_audit(html_file):
         "expired_projects.csv": access_not_needed
     }
 
-    for filename, dataframe in audi_reports.items():
-        export_df = df.drop(columns=["_merge"])
+    for filename, dataframe in audit_reports.items():
+        export_df = dataframe.drop(columns=["_merge"])
         file_path = os.path.join(OUTPUT_DIR, filename)
         export_df.to_csv(file_path, index=False)
         print(f"successfully generated report: {file_path}")
