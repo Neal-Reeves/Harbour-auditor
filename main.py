@@ -40,7 +40,6 @@ class TrackerUser:
     name: str
     email: str
     supervisor_name: str
-    #supervisor_email: Optional[str] = None
     project_end_date: Optional[date] = None
 
 
@@ -50,7 +49,6 @@ class AuditOutput:
     email: str
     status: str = "Active" #Options: Active, Left UCL, Project Expired, Ineligible
     supervisor_name: Optional[str] = None
-    #supervisor_email: Optional[str] = None
 
 def open_tracker():
     print("Initialising connection to SharePoint")
@@ -100,7 +98,6 @@ def extract_tracker_users(tracker):
             email = row.iloc[EMAIL_COLUMN],
             project_end_date = row.iloc[PROJECT_END_COLUMN],
             supervisor_name = row.iloc[SUPERVISOR_NAME_COLUMN],
-            #supervisor_email = row.iloc[SUPERVISOR_EMAIL_COLUMN]
         )
         tracker_users.append(row_obj)
     
@@ -162,7 +159,6 @@ def run_audit(html_file):
     tracker_users = extract_tracker_users(tracker)
     audit_frame, unparsed = compare_user_lists(all_of_us_users, tracker_users)
     output_df = generate_audit_outputs((audit_frame))
-    approved, no_longer_at_ucl, access_not_needed, unparsed = compare_user_lists(all_of_us_users, tracker_users)
 
     status_for_filenames = {
         "Active": "approved_users.csv",
