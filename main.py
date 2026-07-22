@@ -4,7 +4,7 @@ import argparse
 from dotenv import load_dotenv
 import pandas as pd
 from bs4 import BeautifulSoup
-from dataclasses import dataclass
+from dataclasses import dataclass, asdict
 from typing import Optional
 from datetime import date
 from office365.sharepoint.client_context import ClientContext
@@ -118,25 +118,41 @@ def compare_user_lists(source_table, tracker_table):
         indicator=True
     )
 
-    approved = audit_frame[audit_frame["_merge"] == "both"]
-    no_longer_at_ucl = audit_frame[audit_frame["_merge"] == "right_only"]
-    
-    today = pd.to_datetime("today")
-    audit_frame["raw_end_date"] = audit_frame["project_end_date"].copy()
+    audit_frame["project_end_date_raw"] = audit_frame["project_end_date"]
     audit_frame["project_end_date"] = pd.to_datetime(audit_frame["project_end_date"], errors="coerce")
 
-    access_not_needed = audit_frame[
-        (audit_frame["_merge"] == "both") &
-        (audit_frame["project_end_date"] < today)
-    ]
-
-    invalid_end_date = audit_frame[
+    unparsed = audit_frame[
         audit_frame["project_end_date"].isna() &
-        audit_frame["raw_end_date"].notna() &
-        audit_frame["raw_end_date"].str.lower() != "open"
+        audit_frame["project_end_date"].notna() &
+        (audit_frame["project_end_date_raw"].astype(str).str.lower() != "open")
     ]
+    return audit_frame, unparsed
 
-    return approved, no_longer_at_ucl, access_not_needed, invalid_end_date
+def generate_audit_outputs(audit_df):
+    today = pd.to_datetime("today")
+    outputs = []
+
+    for index, row in audit_df.iterrows():
+        name = row.get("name_x") if pd.notna(row.get("name_x")) else row.get("name_y")
+
+        if row["_merge"] == "left_only":
+            status = "Left UCL"
+        elif row["_merge"] == "right_only":
+            status = "Ineligible"
+        elif pd.notna(row["project_end_date"]) and row["project_end_date"] < today:
+            status = "Project Expired"
+        else:
+            status = "Active"
+        
+        outputs.append(AuditOutput(
+            name = name,
+            email = row["email"],
+            status = status,
+            supervisor_name = row.get("supervisor_name")
+        ))
+        
+        outputs_df = pd.DataFrame([asdict(o) for o in outputs])
+        return outputs_df
 
 
 def run_audit(html_file):
@@ -144,28 +160,27 @@ def run_audit(html_file):
     all_of_us_users = all_of_us_parser(html_file)
     tracker = open_tracker()
     tracker_users = extract_tracker_users(tracker)
-
+    audit_frame, unparsed = compare_user_lists(all_of_us_users, tracker_users)
+    output_df = generate_audit_outputs((audit_frame))
     approved, no_longer_at_ucl, access_not_needed, unparsed = compare_user_lists(all_of_us_users, tracker_users)
 
-    audit_reports = {
-        "approved_users.csv": approved,
-        "left_UCL.csv": no_longer_at_ucl,
-        "expired_projects.csv": access_not_needed
+    status_for_filenames = {
+        "Active": "approved_users.csv",
+        "Left UCL": "left_ucl.csv",
+        "Project Expired": "expired_projects.csv",
+        "Ineligible": "ineligible_users.csv"
     }
 
-    if not unparsed.empty:
-        audit_reports["unparsed_dates.csv"] = unparsed
-        print(f"Warning: {len(unparsed)} row(s) have an unparseable project end date. Check manually.")
-
-
-
-    for filename, dataframe in audit_reports.items():
-        export_df = dataframe.drop(columns=["_merge"])
+    for status, filename in status_for_filenames.items():
+        subset = output_df[output_df["status"] == status]
         file_path = os.path.join(OUTPUT_DIR, filename)
-        export_df.to_csv(file_path, index=False)
-        print(f"successfully generated report: {file_path}")
+        subset.to_csv(file_path, index=False)
+        print(f"Successfully generated report: {file_path} ({len(subset)} row(s))")
 
-
+    if not unparsed.empty:
+        unparsed_path = os.path.join(OUTPUT_DIR, "unparsed_dates.csv")
+        unparsed.to_csv(unparsed_path, index=False)
+        print(f"Warning: {len(unparsed)} row(s) have an unparseable project end date. Check manually.")
 
 def parse_args():
     parser = argparse.ArgumentParser(
