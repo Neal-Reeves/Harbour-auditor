@@ -1,2 +1,4 @@
 # Environment variables containing sensitive IDs and URLs:
 .env
+venv/
+requirements.txt

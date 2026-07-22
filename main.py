@@ -1,5 +1,6 @@
 import os
 import io
+import argparse
 from dotenv import load_dotenv
 import pandas as pd
 from bs4 import BeautifulSoup
@@ -17,7 +18,7 @@ PROJECT_END_COLUMN = 11
 SUPERVISOR_NAME_COLUMN = 3
 SUPERVISOR_EMAIL_COLUMN = None
 
-SOURCE_URL = ""
+SOURCE_URL = "../Test.html"
 TRACKER_URL = ""
 OUTPUT_DIR = "/outputs/audit_tables"
 
@@ -37,9 +38,10 @@ class PortalUser:
 class TrackerUser:
     name: str
     email: str
-    project_end_date: Optional[date] = None
     supervisor_name: str
-    supervisor_email: str
+    supervisor_email: Optional[str] = None
+    project_end_date: Optional[date] = None
+
 
 @dataclass
 class AuditOutput:
@@ -49,7 +51,7 @@ class AuditOutput:
     supervisor_name: Optional[str] = None
     supervisor_email: Optional[str] = None
 
-def open_tracker(tracker_url):
+def open_tracker():
     print("Initialising connection to SharePoint")
 
     client = ClientContext(SITE_URL).with_interactive(
@@ -57,9 +59,12 @@ def open_tracker(tracker_url):
         client_id = CLIENT_ID
     )
     print("Streaming tracker data to memory...")
-    response = client.web.get_file_by_server_relative_url(FILE_URL).download().execute_query()
 
-    return pd.read_excel(io.BytesIO(response.content))
+    file_content = io.BytesIO()
+    client.web.get_file_by_server_relative_url(FILE_URL).download(file_content).execute_query()
+    file_content.seek(0)
+
+    return pd.read_excel(file_content)
 
 def all_of_us_parser(html_file_path):
     #Parses All of Us HTML report to extract active users
@@ -82,7 +87,7 @@ def all_of_us_parser(html_file_path):
                 controlled_tier_access=cells[3].get_text(strip=True) == "X"
             )
         
-        users.append(user_obj)
+            users.append(user_obj)
 
     return pd.DataFrame(users)
 
@@ -90,11 +95,11 @@ def extract_tracker_users(tracker):
     tracker_users = []
     for row in tracker.iterrows():
         row_obj = TrackerUser(
-            name = row[NAME_COLUMN],
-            email = row[EMAIL_COLUMN],
-            project_end_date = row[PROJECT_END_COLUMN],
-            supervisor_name = row[SUPERVISOR_NAME_COLUMN],
-            supervisor_email = row[SUPERVISOR_EMAIL_COLUMN]
+            name = row.iloc[NAME_COLUMN],
+            email = row.iloc[EMAIL_COLUMN],
+            project_end_date = row.iloc[PROJECT_END_COLUMN],
+            supervisor_name = row.iloc[SUPERVISOR_NAME_COLUMN],
+            supervisor_email = row.iloc[SUPERVISOR_EMAIL_COLUMN]
         )
         tracker_users.append(row_obj)
     
@@ -125,24 +130,35 @@ def compare_user_lists(source_table, tracker_table):
 
     return approved, no_longer_at_ucl, access_not_needed
 
-tracker = open_tracker(TRACKER_URL)
-all_of_us_users = all_of_us_parser(SOURCE_URL)
-tracker_users = extract_tracker_users(tracker)
-approved, no_longer_at_ucl, access_not_needed = compare_user_lists(all_of_us_users, tracker_users)
 
-audit_reports = {
-    "approved_users.csv": approved,
-    "left_UCL.csv": no_longer_at_ucl,
-    "expired_projects.csv": access_not_needed
-}
+def run_audit(html_file):
 
-for filename, df in audit_reports.items():
-    export_df = df.copy()
+    all_of_us_users = all_of_us_parser(html_file)
+    tracker_users = open_tracker()
 
-    export_df = export_df.drop(columns=["_merge"])
+    approved, no_longer_at_ucl, access_not_needed = compare_user_lists(all_of_us_users, tracker_users)
 
-    file_path = os.path.join(OUTPUT_DIR, filename)
+    audit_reports = {
+        "approved_users.csv": approved,
+        "left_UCL.csv": no_longer_at_ucl,
+        "expired_projects.csv": access_not_needed
+    }
 
-    export_df.to_csv(file_path, index=False)
-    print(f"Successfully generated report: {filename}")
+    for filename, dataframe in audi_reports.items():
+        export_df = df.drop(columns=["_merge"])
+        file_path = os.path.join(OUTPUT_DIR, filename)
+        export_df.to_csv(file_path, index=False)
+        print(f"successfully generated report: {file_path}")
 
+
+
+def parse_args():
+    parser = argparse.ArgumentParser(
+        description = "Compare the All of Us Researcher Workbench access report against the UCL tracker."
+    )
+
+    return parser.parse_args()
+
+if __name__ == "__main__":
+    args = parse_args()
+    run_audit(SOURCE_URL)
