@@ -133,9 +133,9 @@ def generate_audit_outputs(audit_df):
         name = row.get("name_x") if pd.notna(row.get("name_x")) else row.get("name_y")
 
         if row["_merge"] == "left_only":
-            status = "Left UCL"
-        elif row["_merge"] == "right_only":
             status = "Ineligible"
+        elif row["_merge"] == "right_only":
+            status = "Left UCL"
         elif pd.notna(row["project_end_date"]) and row["project_end_date"] < today:
             status = "Project Expired"
         else:
