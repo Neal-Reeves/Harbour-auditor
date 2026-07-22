@@ -38,8 +38,9 @@ Files are written to ./Outputs/audit_tables. These folders will be created if th
 
 ### How to Run
 
-1. Navigate to the `Harbour Auditor` folder.
-2. Run `Python main.py`
+1. Open a terminal.
+2. Navigate to the `Harbour Auditor` folder.
+3. Run `Python main.py`
 
 ## Authors
 
