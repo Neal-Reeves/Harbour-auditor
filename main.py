@@ -20,7 +20,8 @@ SUPERVISOR_EMAIL_COLUMN = None
 
 SOURCE_URL = "../Test.html"
 TRACKER_URL = ""
-OUTPUT_DIR = "/outputs/audit_tables"
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+OUTPUT_DIR = os.path.join(BASE_DIR, "outputs", "audit_tables")
 
 DOMAIN_NAME = os.environ.get("UCL_DOMAIN_NAME")
 SITE_URL = os.environ.get("SHAREPOINT_SITE_URL")
@@ -39,7 +40,7 @@ class TrackerUser:
     name: str
     email: str
     supervisor_name: str
-    supervisor_email: Optional[str] = None
+    #supervisor_email: Optional[str] = None
     project_end_date: Optional[date] = None
 
 
@@ -49,7 +50,7 @@ class AuditOutput:
     email: str
     status: str = "Active" #Options: Active, Left UCL, Project Expired, Ineligible
     supervisor_name: Optional[str] = None
-    supervisor_email: Optional[str] = None
+    #supervisor_email: Optional[str] = None
 
 def open_tracker():
     print("Initialising connection to SharePoint")
@@ -93,21 +94,21 @@ def all_of_us_parser(html_file_path):
 
 def extract_tracker_users(tracker):
     tracker_users = []
-    for row in tracker.iterrows():
+    for index, row in tracker.iterrows():
         row_obj = TrackerUser(
             name = row.iloc[NAME_COLUMN],
             email = row.iloc[EMAIL_COLUMN],
             project_end_date = row.iloc[PROJECT_END_COLUMN],
             supervisor_name = row.iloc[SUPERVISOR_NAME_COLUMN],
-            supervisor_email = row.iloc[SUPERVISOR_EMAIL_COLUMN]
+            #supervisor_email = row.iloc[SUPERVISOR_EMAIL_COLUMN]
         )
         tracker_users.append(row_obj)
     
     return pd.DataFrame(tracker_users)
 
 def compare_user_lists(source_table, tracker_table):
-    source_table["email"] = source_table["email"].str.strip().lower()
-    tracker_table["email"] = tracker_table["email"].str.strip().lower()
+    source_table["email"] = source_table["email"].str.strip().str.lower()
+    tracker_table["email"] = tracker_table["email"].str.strip().str.lower()
 
     audit_frame = pd.merge(
         source_table,
@@ -121,28 +122,42 @@ def compare_user_lists(source_table, tracker_table):
     no_longer_at_ucl = audit_frame[audit_frame["_merge"] == "right_only"]
     
     today = pd.to_datetime("today")
-    audit_frame["project_end_date"] = pd.to_datetime(audit_frame["project_end_date"])
+    audit_frame["raw_end_date"] = audit_frame["project_end_date"].copy()
+    audit_frame["project_end_date"] = pd.to_datetime(audit_frame["project_end_date"], errors="coerce")
 
     access_not_needed = audit_frame[
         (audit_frame["_merge"] == "both") &
         (audit_frame["project_end_date"] < today)
     ]
 
-    return approved, no_longer_at_ucl, access_not_needed
+    invalid_end_date = audit_frame[
+        audit_frame["project_end_date"].isna() &
+        audit_frame["raw_end_date"].notna() &
+        audit_frame["raw_end_date"].str.lower() != "open"
+    ]
+
+    return approved, no_longer_at_ucl, access_not_needed, invalid_end_date
 
 
 def run_audit(html_file):
-
+    os.makedirs(OUTPUT_DIR, exist_ok=True)
     all_of_us_users = all_of_us_parser(html_file)
-    tracker_users = open_tracker()
+    tracker = open_tracker()
+    tracker_users = extract_tracker_users(tracker)
 
-    approved, no_longer_at_ucl, access_not_needed = compare_user_lists(all_of_us_users, tracker_users)
+    approved, no_longer_at_ucl, access_not_needed, unparsed = compare_user_lists(all_of_us_users, tracker_users)
 
     audit_reports = {
         "approved_users.csv": approved,
         "left_UCL.csv": no_longer_at_ucl,
         "expired_projects.csv": access_not_needed
     }
+
+    if not unparsed.empty:
+        audit_reports["unparsed_dates.csv"] = unparsed
+        print(f"Warning: {len(unparsed)} row(s) have an unparseable project end date. Check manually.")
+
+
 
     for filename, dataframe in audit_reports.items():
         export_df = dataframe.drop(columns=["_merge"])
