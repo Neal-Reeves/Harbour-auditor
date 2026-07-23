@@ -197,4 +197,4 @@ def parse_args():
 
 if __name__ == "__main__":
     args = parse_args()
-    run_audit(SOURCE_URL)
+    run_audit(args.log_url)
