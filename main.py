@@ -52,18 +52,24 @@ class AuditOutput:
 
 def open_tracker():
     print("Initialising connection to SharePoint")
+    try:
 
-    client = ClientContext(SITE_URL).with_interactive(
-        tenant= DOMAIN_NAME,
-        client_id = CLIENT_ID
-    )
-    print("Streaming tracker data to memory...")
+        client = ClientContext(SITE_URL).with_interactive(
+            tenant= DOMAIN_NAME,
+            client_id = CLIENT_ID
+        )
+        print("Streaming tracker data to memory...")
 
-    file_content = io.BytesIO()
-    client.web.get_file_by_server_relative_url(FILE_URL).download(file_content).execute_query()
-    file_content.seek(0)
+        file_content = io.BytesIO()
+        client.web.get_file_by_server_relative_url(FILE_URL).download(file_content).execute_query()
+        file_content.seek(0)
 
-    return pd.read_excel(file_content)
+        return pd.read_excel(file_content)
+    except Exception as e:
+        raise RunTimeError(
+            f"Failed to fetch tracker from SharePoint: {SITE_URL}."
+            f"Check .env values and ensure completion of sign-in prompt. Error details: {e}."
+        )
 
 def all_of_us_parser(html_file_path):
     #Parses All of Us HTML report to extract active users
@@ -182,7 +188,11 @@ def parse_args():
     parser = argparse.ArgumentParser(
         description = "Compare the All of Us Researcher Workbench access report against the UCL tracker."
     )
-
+    parser.add_argument(
+        "--log-url",
+        default = None,
+        help = "URL for All of Us access logs."
+    )
     return parser.parse_args()
 
 if __name__ == "__main__":
