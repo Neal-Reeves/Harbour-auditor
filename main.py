@@ -67,7 +67,7 @@ def open_tracker():
 
         return pd.read_excel(file_content)
     except Exception as e:
-        raise RunTimeError(
+        raise RuntimeError(
             f"Failed to fetch tracker from SharePoint: {SITE_URL}."
             f"Check .env values and ensure completion of sign-in prompt. Error details: {e}."
         )
