@@ -2,3 +2,6 @@
 .env
 venv/
 outputs/
+audit-frame.csv
+debug_csv.csv
+debug_report.html

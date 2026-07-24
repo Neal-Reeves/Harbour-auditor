@@ -76,8 +76,9 @@ def all_of_us_parser(html_file_path):
     #Parses All of Us HTML report to extract active users
     response = requests.get(html_file_path)
     response .raise_for_status()
+
     soup = BeautifulSoup(response.text, "html.parser")
-    
+
     users = []
 
     #Obtain all table rows
@@ -131,6 +132,7 @@ def compare_user_lists(source_table, tracker_table):
         audit_frame["project_end_date"].notna() &
         (audit_frame["project_end_date_raw"].astype(str).str.lower() != "open")
     ]
+
     return audit_frame, unparsed
 
 def generate_audit_outputs(audit_df):
@@ -156,8 +158,9 @@ def generate_audit_outputs(audit_df):
             supervisor_name = row.get("supervisor_name")
         ))
         
-        outputs_df = pd.DataFrame([asdict(o) for o in outputs])
-        return outputs_df
+    outputs_df = pd.DataFrame([asdict(o) for o in outputs])
+
+    return outputs_df
 
 
 def run_audit(html_file):
