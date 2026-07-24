@@ -189,10 +189,17 @@ def parse_args():
         description = "Compare the All of Us Researcher Workbench access report against the UCL tracker."
     )
     parser.add_argument(
-        "--log-url",
+        "log_url",
         default = None,
         help = "URL for All of Us access logs."
     )
+
+    parser.add_argument(
+        "--dataset-name",
+        default="All of Us",
+        help = "Name of dataset for comparison."
+    )
+
     return parser.parse_args()
 
 if __name__ == "__main__":
