@@ -19,8 +19,7 @@ PROJECT_END_COLUMN = 11
 SUPERVISOR_NAME_COLUMN = 3
 SUPERVISOR_EMAIL_COLUMN = None
 
-SOURCE_URL = "../Test.html"
-TRACKER_URL = ""
+#Determine file path for output CSVs. Default is to write to ./outputs/audit_tables.
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 OUTPUT_DIR = os.path.join(BASE_DIR, "outputs", "audit_tables")
 
@@ -42,7 +41,6 @@ class TrackerUser:
     email: str
     supervisor_name: str
     project_end_date: Optional[date] = None
-
 
 @dataclass
 class AuditOutput:
@@ -125,11 +123,13 @@ def compare_user_lists(source_table, tracker_table):
     )
 
     audit_frame["project_end_date_raw"] = audit_frame["project_end_date"]
+    #Convert end dates to datetime type. Invalid values (e.g., strings) will be null.
     audit_frame["project_end_date"] = pd.to_datetime(audit_frame["project_end_date"], errors="coerce")
 
+    #Capture invalid end dates (i.e., end date null, raw end date is not null and not 'open')
     unparsed = audit_frame[
         audit_frame["project_end_date"].isna() &
-        audit_frame["project_end_date"].notna() &
+        audit_frame["project_end_date_raw"].notna() &
         (audit_frame["project_end_date_raw"].astype(str).str.lower() != "open")
     ]
 
@@ -193,6 +193,7 @@ def parse_args():
     parser = argparse.ArgumentParser(
         description = "Compare the All of Us Researcher Workbench access report against the UCL tracker."
     )
+
     parser.add_argument(
         "log_url",
         default = None,
