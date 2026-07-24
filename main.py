@@ -1,5 +1,6 @@
 import os
 import io
+import requests
 import argparse
 from dotenv import load_dotenv
 import pandas as pd
@@ -73,8 +74,9 @@ def open_tracker():
 
 def all_of_us_parser(html_file_path):
     #Parses All of Us HTML report to extract active users
-    with open(html_file_path, "r", encoding="utf-8") as logfile:
-        soup = BeautifulSoup(logfile.read(), "html.parser")
+    response = requests.get(html_file_path)
+    response .raise_for_status()
+    soup = BeautifulSoup(response.text, "html.parser")
     
     users = []
 
