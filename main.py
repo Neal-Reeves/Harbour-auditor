@@ -186,7 +186,7 @@ def run_audit(html_file):
     output_df = generate_audit_outputs((audit_frame))
 
     status_for_filenames = {
-        "Active": "approved_users.csv",
+        "Approved": "approved_users.csv",
         "Left UCL": "left_ucl.csv",
         "Project Expired": "expired_projects.csv",
         "Ineligible": "ineligible_users.csv"
