@@ -144,18 +144,22 @@ def generate_audit_outputs(audit_df):
         name = row.get("name_x") if pd.notna(row.get("name_x")) else row.get("name_y")
 
         email = row["email"]
-        affiliation = request_affiliation(email)
-        employment_status = still_at_ucl(affiliation)
-
-        if row["_merge"] == "left_only":
-            status = "Ineligible"
-        elif row["_merge"] == "right_only":
-            status = "Left UCL"
-        elif pd.notna(row["project_end_date"]) and row["project_end_date"] < today:
-            status = "Project Expired"
+        if pd.isna(row["email"]):
+            status = "Flag"
+            
         else:
-            status = "Active"
-        
+            affiliation = request_affiliation(email)
+            employment_status = still_at_ucl(affiliation)
+
+            if row["_merge"] == "left_only":
+                status = "Ineligible"
+            elif employment_status == False:
+                status = "Left UCL"
+            elif pd.notna(row["project_end_date"]) and row["project_end_date"] < today:
+                status = "Project Expired"
+            else:
+                status = "Approved"
+            
         outputs.append(AuditOutput(
             name = name,
             email = row["email"],
