@@ -191,8 +191,10 @@ def run_audit(html_file):
         print(f"Warning: {len(unparsed)} row(s) have an unparseable project end date. Check manually.")
 
 def request_affiliation(user_email):
-    return None
+    request_url = PERSON_API_URL + f"person?email={user_email}"
+    response = requests.get(request_url)
 
+    return response
 
 def parse_args():
     parser = argparse.ArgumentParser(
