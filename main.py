@@ -143,6 +143,10 @@ def generate_audit_outputs(audit_df):
     for index, row in audit_df.iterrows():
         name = row.get("name_x") if pd.notna(row.get("name_x")) else row.get("name_y")
 
+        email = row["email"]
+        affiliation = request_affiliation(email)
+        employment_status = still_at_ucl(affiliation)
+
         if row["_merge"] == "left_only":
             status = "Ineligible"
         elif row["_merge"] == "right_only":
@@ -198,7 +202,7 @@ def request_affiliation(user_email):
 
     return response
 
-def still_at_UCL(user_json):
+def still_at_ucl(user_json):
     associations = user_json.get("association", [])
 
     if not associations:
