@@ -230,16 +230,20 @@ def get_api_token():
 def request_affiliation(user_email):
     token = get_api_token()
     request_url = PERSON_API_URL + f"person?email={user_email}"
-    response = requests.get(request_url, headers={"Authentication": f"Bearer {token}"})
+    response = requests.get(request_url, headers={"Authorization": f"Bearer {token}"})
 
     response.raise_for_status()
-
-    return response
+    
+    return response.json()
 
 def still_at_ucl(user_json):
-    associations = user_json.get("association", [])
+    person_collection = (user_json or {}).get("person_collection", [])
 
-    if not associations:
+    associations = []
+    for property in person_collection:
+        associations.extend(property.get("association") or [])
+
+    if not associations: 
         return False
 
     return any(assoc.get("currency") != 3 for assoc in associations)
