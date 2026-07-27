@@ -27,6 +27,7 @@ DOMAIN_NAME = os.environ.get("UCL_DOMAIN_NAME")
 SITE_URL = os.environ.get("SHAREPOINT_SITE_URL")
 CLIENT_ID = os.environ.get("SHAREPOINT_CLIENT_ID")
 FILE_URL = os.environ.get("TRACKER_FILE_URL")
+PERSON_API_URL = os.environ.get("PERSON_API_URL")
 
 @dataclass
 class PortalUser:
@@ -188,6 +189,10 @@ def run_audit(html_file):
         unparsed_path = os.path.join(OUTPUT_DIR, "unparsed_dates.csv")
         unparsed.to_csv(unparsed_path, index=False)
         print(f"Warning: {len(unparsed)} row(s) have an unparseable project end date. Check manually.")
+
+def request_affiliation(user_email):
+    return None
+
 
 def parse_args():
     parser = argparse.ArgumentParser(
