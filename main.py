@@ -194,7 +194,17 @@ def request_affiliation(user_email):
     request_url = PERSON_API_URL + f"person?email={user_email}"
     response = requests.get(request_url)
 
+    response.raise_for_status()
+
     return response
+
+def still_at_UCL(user_json):
+    associations = user_json.get("association", [])
+
+    if not associations:
+        return False
+
+    return any(assoc.get("currency") != 3 for assoc in associations)
 
 def parse_args():
     parser = argparse.ArgumentParser(
