@@ -2,6 +2,7 @@ import os
 import io
 import requests
 import argparse
+import time
 from dotenv import load_dotenv
 import pandas as pd
 from bs4 import BeautifulSoup
@@ -28,6 +29,10 @@ SITE_URL = os.environ.get("SHAREPOINT_SITE_URL")
 CLIENT_ID = os.environ.get("SHAREPOINT_CLIENT_ID")
 FILE_URL = os.environ.get("TRACKER_FILE_URL")
 PERSON_API_URL = os.environ.get("PERSON_API_URL")
+PERSON_API_CLIENT_SECRET = os.environ.get("PERSON_API_CLIENT_SECRET")
+PERSON_API_TARGET_CLIENT_ID = os.environ.get("PERSON_API_TARGET_CLIENT_ID")
+
+_token_cache = {}
 
 @dataclass
 class PortalUser:
@@ -146,7 +151,7 @@ def generate_audit_outputs(audit_df):
         email = row["email"]
         if pd.isna(row["email"]):
             status = "Flag"
-            
+
         else:
             affiliation = request_affiliation(email)
             employment_status = still_at_ucl(affiliation)
@@ -198,9 +203,34 @@ def run_audit(html_file):
         unparsed.to_csv(unparsed_path, index=False)
         print(f"Warning: {len(unparsed)} row(s) have an unparseable project end date. Check manually.")
 
+def get_api_token():
+    cached = _token_cache.get("token")
+    if cached and cached["expires_at"] > time.time() + 30:
+        return cached["access_token"]
+
+    token_url = f"https://login.microsoftonline.com/{DOMAIN_NAME}/oauth2/v2.0/token"
+
+    data = {
+        "grant_type": "client_credentials",
+        "client_id": CLIENT_ID,
+        "client_secret": PERSON_API_CLIENT_SECRET,
+        "scope": f"{PERSON_API_TARGET_CLIENT_ID}/.default"
+    }
+
+    response = requests.post(token_url, data=data)
+    response.raise_for_status()
+    payload = response.json()
+
+    _token_cache["token"] = {
+        "access_token": payload["access_token"],
+        "expires_at": time.time() + payload["expires_in"]
+    }
+    return payload["access_token"]
+
 def request_affiliation(user_email):
+    token = get_api_token()
     request_url = PERSON_API_URL + f"person?email={user_email}"
-    response = requests.get(request_url)
+    response = requests.get(request_url, headers={"Authentication": f"Bearer {token}"})
 
     response.raise_for_status()
 
