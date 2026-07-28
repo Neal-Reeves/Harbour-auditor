@@ -55,7 +55,7 @@ class AuditOutput:
     status: str = "Active" #Options: Active, Left UCL, Project Expired, Ineligible, Flag
     supervisor_name: Optional[str] = None
 
-def open_tracker() -> pd.ExcelFile | None:
+def open_tracker() -> pd.DataFrame:
     #Attempts to stream tracker Workbook into memory
     print("Initialising connection to SharePoint")
     try:
@@ -275,7 +275,7 @@ def run_audit(html_file: str) -> None:
         print(f"Successfully generated report: {file_path} ({len(subset)} row(s))")
 
 def parse_args() -> argparse.ArgumentParser:
-    parser = argparse.ArgumentParser(
+    parser = argparse.Namespace(
         description = "Compare the All of Us Researcher Workbench access report against the UCL tracker."
     )
 
