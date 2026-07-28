@@ -134,14 +134,8 @@ def compare_user_lists(source_table, tracker_table):
     #Convert end dates to datetime type. Invalid values (e.g., strings) will be null.
     audit_frame["project_end_date"] = pd.to_datetime(audit_frame["project_end_date"], errors="coerce")
 
-    #Capture invalid end dates (i.e., end date null, raw end date is not null and not 'open')
-    unparsed = audit_frame[
-        audit_frame["project_end_date"].isna() &
-        audit_frame["project_end_date_raw"].notna() &
-        (audit_frame["project_end_date_raw"].astype(str).str.lower() != "open")
-    ]
+    return audit_frame
 
-    return audit_frame, unparsed
 
 def generate_audit_outputs(audit_df, employment_map):
     today = pd.to_datetime("today")
@@ -152,7 +146,17 @@ def generate_audit_outputs(audit_df, employment_map):
 
         email = row.get("email")
 
-        if pd.isna(email):
+        raw_date = row.get("project_end_date_raw")
+
+        has_unparsed_date = (
+            pd.isna(row.get("project_end_date")) and 
+            pd.notna(raw_date) and
+            str(raw_date).strip().lower() != "open"
+        )
+
+        has_missing_email = pd.isna(email)
+
+        if has_missing_email or has_unparsed_date: 
             status = "Flag"
         else:
             is_active = employment_map.get(email, False)
@@ -181,7 +185,7 @@ def run_audit(html_file):
     all_of_us_users = all_of_us_parser(html_file)
     tracker = open_tracker()
     tracker_users = extract_tracker_users(tracker)
-    audit_frame, unparsed = compare_user_lists(all_of_us_users, tracker_users)
+    audit_frame = compare_user_lists(all_of_us_users, tracker_users)
 
     unique_emails = audit_frame["email"].dropna().unique().tolist()
 
@@ -193,7 +197,8 @@ def run_audit(html_file):
         "Approved": "approved_users.csv",
         "Left UCL": "left_ucl.csv",
         "Project Expired": "expired_projects.csv",
-        "Ineligible": "ineligible_users.csv"
+        "Ineligible": "ineligible_users.csv",
+        "Flag": "flagged_users.csv"
     }
 
     for status, filename in status_for_filenames.items():
@@ -201,11 +206,6 @@ def run_audit(html_file):
         file_path = os.path.join(OUTPUT_DIR, filename)
         subset.to_csv(file_path, index=False)
         print(f"Successfully generated report: {file_path} ({len(subset)} row(s))")
-
-    if not unparsed.empty:
-        unparsed_path = os.path.join(OUTPUT_DIR, "flagged_users.csv")
-        unparsed.to_csv(unparsed_path, index=False)
-        print(f"Warning: {len(unparsed)} row(s) have an unparseable project end date. Check manually.")
 
 def get_api_token():
     cached = _token_cache.get("token")
