@@ -144,6 +144,7 @@ def compare_user_lists(source_table, tracker_table):
 def generate_audit_outputs(audit_df):
     today = pd.to_datetime("today")
     outputs = []
+    session = requests.Session()
 
     for index, row in audit_df.iterrows():
         name = row.get("name_x") if pd.notna(row.get("name_x")) else row.get("name_y")
@@ -153,7 +154,7 @@ def generate_audit_outputs(audit_df):
             status = "Flag"
 
         else:
-            affiliation = request_affiliation(email)
+            affiliation = request_affiliation(session, email)
             employment_status = still_at_ucl(affiliation)
 
             if row["_merge"] == "left_only":
@@ -227,10 +228,10 @@ def get_api_token():
     }
     return payload["access_token"]
 
-def request_affiliation(user_email):
+def request_affiliation(session, user_email):
     token = get_api_token()
     request_url = PERSON_API_URL + f"person?email={user_email}"
-    response = requests.get(request_url, headers={"Authorization": f"Bearer {token}"})
+    response = session.get(request_url, headers={"Authorization": f"Bearer {token}"})
 
     response.raise_for_status()
     
