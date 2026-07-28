@@ -203,7 +203,7 @@ def run_audit(html_file):
         print(f"Successfully generated report: {file_path} ({len(subset)} row(s))")
 
     if not unparsed.empty:
-        unparsed_path = os.path.join(OUTPUT_DIR, "unparsed_dates.csv")
+        unparsed_path = os.path.join(OUTPUT_DIR, "flagged_users.csv")
         unparsed.to_csv(unparsed_path, index=False)
         print(f"Warning: {len(unparsed)} row(s) have an unparseable project end date. Check manually.")
 

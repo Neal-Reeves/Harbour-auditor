@@ -7,13 +7,13 @@ This script automatically compares access logs (formatted as an HTML file) with 
 
 Matching is performed based on user email. It is therefore assumed that the lead applicant's email in the tracker will match their email in the access logs.  
 
-The script four CSV files:
-1. approved_users.csv -- Users who appear in both the tracker workbook and the HTML access report. These are approved users for whom no action is required.
-2. left_ucl.csv -- Users who appear in the tracker but who do not appear in the HTML report. These users should be assumed to have left UCL and may need their access permissions changed.
-3. expired_projects.csv -- Users who appear in the HTML access report and who appear in the tracker but where the recorded project expiry date has passed. These projects should be assumed to have concluded and the users may need their access permissions changed.
-4. ineligible_users.csv -- Users who appear in the HTML access report and who do not appear in the tracker. These users may be assumed to be ineligible and their access permissions should be updated.
+The script produces four CSV files and an optional fifth CSV file:
+1. approved_users.csv -- users who appear in both the tracker workbook and the HTML access report. These are approved users for whom no action is required.
+2. expired_projects.csv -- users who appear in the tracker for whom the project end date has passed. These are approved users who should know longer require access to All of Us.
+3. ineligible_users.csv -- users who appear in the HTML access report and who do not appear in the tracker. These users may be assumed to be ineligible and their access permissions should be updated.
+4. left_ucl.csv -- users who appear in the tracker who do not have an active affiliation with UCL. These users' access permissions should be updated.
 
-In addition, a fifth file named unparsed_dates.csv is generated containing user details for those users for whom a project end date is present, the project end date cannot be converted to a datetime object and the project end date is not "Open" or "open". This file will only be generated where relevant and will not be output if no matching records are found.
+In addition, a fifth file named flagged_users is generated when users are detected who warrant manual analysis. This includes users for whom a comparison between the two sources could not be completed, project end date(s) could not be compared with the current date or who could not be found in the UCL Person API. This is likely to occur when a users' email and/or project end dates are blank or malformed in the tracker. 
 
 Files are written to ./Outputs/audit_tables. These folders will be created if they do not already exist.
 
