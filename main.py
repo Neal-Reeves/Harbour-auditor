@@ -58,7 +58,8 @@ class AuditOutput:
     status: str = "Active" #Options: Active, Left UCL, Project Expired, Ineligible, Flag
     supervisor_name: Optional[str] = None
 
-def open_tracker():
+def open_tracker() -> pd.ExcelFile:
+    #Attempts to stream tracker Workbook into memory
     print("Initialising connection to SharePoint")
     try:
 
@@ -79,7 +80,7 @@ def open_tracker():
             f"Check .env values and ensure completion of sign-in prompt. Error details: {e}."
         )
 
-def all_of_us_parser(html_file_path):
+def all_of_us_parser(html_file_path: str) -> pd.DataFrame:
     #Parses All of Us HTML report to extract active users
     response = requests.get(html_file_path)
     response .raise_for_status()
@@ -106,7 +107,7 @@ def all_of_us_parser(html_file_path):
 
     return pd.DataFrame(users)
 
-def extract_tracker_users(tracker):
+def extract_tracker_users(tracker) -> pd.DataFrame:
     tracker_users = []
     for index, row in tracker.iterrows():
         row_obj = TrackerUser(
@@ -119,7 +120,7 @@ def extract_tracker_users(tracker):
     
     return pd.DataFrame(tracker_users)
 
-def compare_user_lists(source_table, tracker_table):
+def compare_user_lists(source_table, tracker_table) -> pd.DataFrame:
     source_table["email"] = source_table["email"].str.strip().str.lower()
     tracker_table["email"] = tracker_table["email"].str.strip().str.lower()
 
@@ -138,7 +139,7 @@ def compare_user_lists(source_table, tracker_table):
     return audit_frame
 
 
-def generate_audit_outputs(audit_df, employment_map):
+def generate_audit_outputs(audit_df, employment_map) -> pd.DataFrame:
     today = pd.to_datetime("today")
     outputs = []
 
@@ -213,7 +214,7 @@ def request_affiliation(session, token, user_email):
     
     return response.json()
 
-def still_at_ucl(user_json):
+def still_at_ucl(user_json: dict) -> bool:
     person_collection = (user_json or {}).get("person_collection", [])
 
     associations = []
@@ -225,7 +226,7 @@ def still_at_ucl(user_json):
 
     return any(assoc.get("currency") != 3 for assoc in associations)
 
-def fetch_employment_status(email, token):
+def fetch_employment_status(email: str, token) -> str | bool:
     if not email or pd.isna(email):
         return (email, False)
     
@@ -235,7 +236,7 @@ def fetch_employment_status(email, token):
     except Exception:
         return (email, False)
 
-def batch_check_ucl_status(emails):
+def batch_check_ucl_status(emails: list) -> dict:
     token = get_api_token()
     # Adjust max_workers (10-20 is usually a safe sweet spot without hitting rate limits)
     with ThreadPoolExecutor(max_workers=10) as executor:
@@ -244,7 +245,7 @@ def batch_check_ucl_status(emails):
 
     return dict(results)
 
-def run_audit(html_file):
+def run_audit(html_file: str):
     os.makedirs(OUTPUT_DIR, exist_ok=True)
     all_of_us_users = all_of_us_parser(html_file)
     tracker = open_tracker()
