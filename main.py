@@ -27,7 +27,7 @@ OUTPUT_DIR = os.path.join(BASE_DIR, "outputs", "audit_tables")
 
 DOMAIN_NAME = os.environ.get("UCL_DOMAIN_NAME")
 SITE_URL = os.environ.get("SHAREPOINT_SITE_URL")
-CLIENT_ID = os.environ.get("SHAREPOINT_CLIENT_ID")
+CLIENT_ID = os.environ.get("APP_CLIENT_ID")
 FILE_URL = os.environ.get("TRACKER_FILE_URL")
 PERSON_API_URL = os.environ.get("PERSON_API_URL")
 PERSON_API_CLIENT_SECRET = os.environ.get("PERSON_API_CLIENT_SECRET")

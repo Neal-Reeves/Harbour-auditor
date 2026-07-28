@@ -30,11 +30,14 @@ Files are written to ./Outputs/audit_tables. These folders will be created if th
 
 1. Download or otherwise clone the repository from GitHub.
 2. Install the required dependencies from requirements.txt: `pip install -r requirements.txt`
-3. Initialise the environments file .env. This should contain four variables: 
+3. Initialise the environments file .env. This should contain seven variables: 
 - UCL_DOMAIN_NAME -- the UCL domain (tenant)
 - SHAREPOINT_SITE_URL -- the SharePoint URL where the tracker is stored. This URL must point to the staff folder
-- SHAREPOINT_CLIENT_ID -- an Entra ID registered application (client) ID. This ID needs SharePoint API permissions, specifically the AllSites.Read permission.
+- APP_CLIENT_ID -- an Entra ID registered application (client) ID. This ID needs SharePoint API permissions, specifically the AllSites.Read permission, as well as permissions for the identity-person-api-production internal UCL API.
 - TRACKER_FILE_URL -- the path for the tracker file which can be copied from SharePoint. This path should begin /sites/
+- PERSON_API_URL -- the URL for the identity-person-api-production API. This URL will be used to query the API for employment status. The URL should end vx/ where x is the version number of the API.
+- PERSON_API_TARGET_CLIENT_ID -- the client ID for the identity-person-api-production API. This ID can be found in the documentation for the API.
+- PERSON_API_CLIENT_SECRET -- a secret value which is used to authenticate with the identity-person-api-production API. 
 
 ### How to Run
 
