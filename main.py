@@ -16,10 +16,10 @@ import pandas as pd
 load_dotenv()
 
 #Column Details
-NAME_COLUMN = 1
-EMAIL_COLUMN = 4
-PROJECT_END_COLUMN = 11
-SUPERVISOR_NAME_COLUMN = 3
+NAME_COLUMN = "Lead applicant full name"
+EMAIL_COLUMN = "Lead applicant email"
+PROJECT_END_COLUMN = "End date"
+SUPERVISOR_NAME_COLUMN = "Supervising researcher full name"
 
 #Determine file path for output CSVs. Default is to write to ./outputs/audit_tables.
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -106,10 +106,10 @@ def extract_tracker_users(tracker: pd.ExcelFile) -> pd.DataFrame:
     tracker_users = []
     for index, row in tracker.iterrows():
         row_obj = TrackerUser(
-            name = row.iloc[NAME_COLUMN],
-            email = row.iloc[EMAIL_COLUMN],
-            project_end_date = row.iloc[PROJECT_END_COLUMN],
-            supervisor_name = row.iloc[SUPERVISOR_NAME_COLUMN],
+            name = row[NAME_COLUMN],
+            email = row[EMAIL_COLUMN],
+            project_end_date = row[PROJECT_END_COLUMN],
+            supervisor_name = row[SUPERVISOR_NAME_COLUMN],
         )
         tracker_users.append(row_obj)
     
@@ -274,8 +274,8 @@ def run_audit(html_file: str) -> None:
         subset.to_csv(file_path, index=False)
         print(f"Successfully generated report: {file_path} ({len(subset)} row(s))")
 
-def parse_args() -> argparse.ArgumentParser:
-    parser = argparse.Namespace(
+def parse_args() -> argparse.Namespace:
+    parser = argparse.ArgumentParser(
         description = "Compare the All of Us Researcher Workbench access report against the UCL tracker."
     )
 
