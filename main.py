@@ -10,6 +10,7 @@ from dataclasses import dataclass, asdict
 from typing import Optional
 from datetime import date
 from office365.sharepoint.client_context import ClientContext
+from concurrent.futures import ThreadPoolExecutor
 
 load_dotenv()
 
@@ -141,7 +142,7 @@ def compare_user_lists(source_table, tracker_table):
 
     return audit_frame, unparsed
 
-def generate_audit_outputs(audit_df):
+def generate_audit_outputs(audit_df, employment_map):
     today = pd.to_datetime("today")
     outputs = []
     session = requests.Session()
@@ -149,34 +150,31 @@ def generate_audit_outputs(audit_df):
     for index, row in audit_df.iterrows():
         name = row.get("name_x") if pd.notna(row.get("name_x")) else row.get("name_y")
 
-        email = row["email"]
-        if pd.isna(row["email"]):
+        email = row.get("email")
+
+        if pd.isna(email):
             status = "Flag"
-
         else:
-            affiliation = request_affiliation(session, email)
-            employment_status = still_at_ucl(affiliation)
+            is_active = employment_map.get(email, False)
+            merge_status = row.get("_merge")
 
-            if row["_merge"] == "left_only":
+            if merge_status == "left_only":
                 status = "Ineligible"
-            elif employment_status == False:
+            elif not is_active:
                 status = "Left UCL"
-            elif pd.notna(row["project_end_date"]) and row["project_end_date"] < today:
+            elif pd.notna(row.get("project_end_date")) and row["project_end_date"] < today:
                 status = "Project Expired"
             else:
                 status = "Approved"
-            
+
         outputs.append(AuditOutput(
-            name = name,
-            email = row["email"],
-            status = status,
-            supervisor_name = row.get("supervisor_name")
+            name=name,
+            email=email,
+            status=status,
+            supervisor_name=row.get("supervisor_name")
         ))
-        
-    outputs_df = pd.DataFrame([asdict(o) for o in outputs])
 
-    return outputs_df
-
+    return pd.DataFrame([asdict(o) for o in outputs])
 
 def run_audit(html_file):
     os.makedirs(OUTPUT_DIR, exist_ok=True)
@@ -184,7 +182,12 @@ def run_audit(html_file):
     tracker = open_tracker()
     tracker_users = extract_tracker_users(tracker)
     audit_frame, unparsed = compare_user_lists(all_of_us_users, tracker_users)
-    output_df = generate_audit_outputs((audit_frame))
+
+    unique_emails = audit_frame["email"].dropna().unique().tolist()
+
+    employment_map = batch_check_ucl_status(unique_emails)
+
+    output_df = generate_audit_outputs(audit_frame, employment_map)
 
     status_for_filenames = {
         "Approved": "approved_users.csv",
@@ -248,6 +251,22 @@ def still_at_ucl(user_json):
         return False
 
     return any(assoc.get("currency") != 3 for assoc in associations)
+
+def fetch_employment_status(email):
+    if not email or pd.isna(email):
+        return (email, False)
+    
+    try:
+        data = request_affiliation(email)
+        return (email, still_at_ucl(data))
+    except Exception:
+        return (email, False)
+
+def batch_check_ucl_status(emails: list[str]) -> dict[str, bool]:
+    # Adjust max_workers (10-20 is usually a safe sweet spot without hitting rate limits)
+    with ThreadPoolExecutor(max_workers=10) as executor:
+        results = executor.map(fetch_employment_status, emails)
+    return dict(results)
 
 def parse_args():
     parser = argparse.ArgumentParser(
