@@ -6,7 +6,7 @@ import time
 from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass, asdict
 from datetime import date
-from typing import Optional
+from typing import Any, Optional
 
 from bs4 import BeautifulSoup
 from dotenv import load_dotenv
@@ -58,7 +58,7 @@ class AuditOutput:
     status: str = "Active" #Options: Active, Left UCL, Project Expired, Ineligible, Flag
     supervisor_name: Optional[str] = None
 
-def open_tracker() -> pd.ExcelFile:
+def open_tracker() -> pd.ExcelFile | None:
     #Attempts to stream tracker Workbook into memory
     print("Initialising connection to SharePoint")
     try:
@@ -139,7 +139,7 @@ def compare_user_lists(source_table: pd.DataFrame, tracker_table: pd.DataFrame) 
     return audit_frame
 
 
-def generate_audit_outputs(audit_df, employment_map) -> pd.DataFrame:
+def generate_audit_outputs(audit_df: pd.DataFrame, employment_map: dict[str, bool]) -> pd.DataFrame:
     today = pd.to_datetime("today")
     outputs = []
 
@@ -182,7 +182,7 @@ def generate_audit_outputs(audit_df, employment_map) -> pd.DataFrame:
 
     return pd.DataFrame([asdict(o) for o in outputs])
 
-def get_api_token():
+def get_api_token() -> str:
     cached = _token_cache.get("token")
     if cached and cached["expires_at"] > time.time() + 30:
         return cached["access_token"]
@@ -206,7 +206,7 @@ def get_api_token():
     }
     return payload["access_token"]
 
-def request_affiliation(session: requests.Session, token, user_email: str):
+def request_affiliation(session: requests.Session, token: str, user_email: str) -> dict[str, Any]:
     request_url = PERSON_API_URL + f"person?email={user_email}"
     response = session.get(request_url, headers={"Authorization": f"Bearer {token}"})
 
@@ -245,7 +245,7 @@ def batch_check_ucl_status(emails: list) -> dict:
 
     return dict(results)
 
-def run_audit(html_file: str):
+def run_audit(html_file: str) -> None:
     os.makedirs(OUTPUT_DIR, exist_ok=True)
     all_of_us_users = all_of_us_parser(html_file)
     tracker = open_tracker()
