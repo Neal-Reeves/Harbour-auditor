@@ -3,14 +3,15 @@ import io
 import requests
 import argparse
 import time
-from dotenv import load_dotenv
-import pandas as pd
-from bs4 import BeautifulSoup
-from dataclasses import dataclass, asdict
-from typing import Optional
-from datetime import date
-from office365.sharepoint.client_context import ClientContext
 from concurrent.futures import ThreadPoolExecutor
+from dataclasses import dataclass, asdict
+from datetime import date
+from typing import Optional
+
+from bs4 import BeautifulSoup
+from dotenv import load_dotenv
+from office365.sharepoint.client_context import ClientContext
+import pandas as pd
 
 load_dotenv()
 
@@ -54,7 +55,7 @@ class TrackerUser:
 class AuditOutput:
     name: str
     email: str
-    status: str = "Active" #Options: Active, Left UCL, Project Expired, Ineligible
+    status: str = "Active" #Options: Active, Left UCL, Project Expired, Ineligible, Flag
     supervisor_name: Optional[str] = None
 
 def open_tracker():
@@ -180,33 +181,6 @@ def generate_audit_outputs(audit_df, employment_map):
 
     return pd.DataFrame([asdict(o) for o in outputs])
 
-def run_audit(html_file):
-    os.makedirs(OUTPUT_DIR, exist_ok=True)
-    all_of_us_users = all_of_us_parser(html_file)
-    tracker = open_tracker()
-    tracker_users = extract_tracker_users(tracker)
-    audit_frame = compare_user_lists(all_of_us_users, tracker_users)
-
-    unique_emails = audit_frame["email"].dropna().unique().tolist()
-
-    employment_map = batch_check_ucl_status(unique_emails)
-
-    output_df = generate_audit_outputs(audit_frame, employment_map)
-
-    status_for_filenames = {
-        "Approved": "approved_users.csv",
-        "Left UCL": "left_ucl.csv",
-        "Project Expired": "expired_projects.csv",
-        "Ineligible": "ineligible_users.csv",
-        "Flag": "flagged_users.csv"
-    }
-
-    for status, filename in status_for_filenames.items():
-        subset = output_df[output_df["status"] == status]
-        file_path = os.path.join(OUTPUT_DIR, filename)
-        subset.to_csv(file_path, index=False)
-        print(f"Successfully generated report: {file_path} ({len(subset)} row(s))")
-
 def get_api_token():
     cached = _token_cache.get("token")
     if cached and cached["expires_at"] > time.time() + 30:
@@ -269,6 +243,33 @@ def batch_check_ucl_status(emails):
         results = [f.result() for f in futures]
 
     return dict(results)
+
+def run_audit(html_file):
+    os.makedirs(OUTPUT_DIR, exist_ok=True)
+    all_of_us_users = all_of_us_parser(html_file)
+    tracker = open_tracker()
+    tracker_users = extract_tracker_users(tracker)
+    audit_frame = compare_user_lists(all_of_us_users, tracker_users)
+
+    unique_emails = audit_frame["email"].dropna().unique().tolist()
+
+    employment_map = batch_check_ucl_status(unique_emails)
+
+    output_df = generate_audit_outputs(audit_frame, employment_map)
+
+    status_for_filenames = {
+        "Approved": "approved_users.csv",
+        "Left UCL": "left_ucl.csv",
+        "Project Expired": "expired_projects.csv",
+        "Ineligible": "ineligible_users.csv",
+        "Flag": "flagged_users.csv"
+    }
+
+    for status, filename in status_for_filenames.items():
+        subset = output_df[output_df["status"] == status]
+        file_path = os.path.join(OUTPUT_DIR, filename)
+        subset.to_csv(file_path, index=False)
+        print(f"Successfully generated report: {file_path} ({len(subset)} row(s))")
 
 def parse_args():
     parser = argparse.ArgumentParser(
