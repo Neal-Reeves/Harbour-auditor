@@ -107,7 +107,7 @@ def all_of_us_parser(html_file_path: str) -> pd.DataFrame:
 
     return pd.DataFrame(users)
 
-def extract_tracker_users(tracker) -> pd.DataFrame:
+def extract_tracker_users(tracker: pd.ExcelFile) -> pd.DataFrame:
     tracker_users = []
     for index, row in tracker.iterrows():
         row_obj = TrackerUser(
@@ -120,7 +120,7 @@ def extract_tracker_users(tracker) -> pd.DataFrame:
     
     return pd.DataFrame(tracker_users)
 
-def compare_user_lists(source_table, tracker_table) -> pd.DataFrame:
+def compare_user_lists(source_table: pd.DataFrame, tracker_table: pd.DataFrame) -> pd.DataFrame:
     source_table["email"] = source_table["email"].str.strip().str.lower()
     tracker_table["email"] = tracker_table["email"].str.strip().str.lower()
 
@@ -206,7 +206,7 @@ def get_api_token():
     }
     return payload["access_token"]
 
-def request_affiliation(session, token, user_email):
+def request_affiliation(session: requests.Session, token, user_email: str):
     request_url = PERSON_API_URL + f"person?email={user_email}"
     response = session.get(request_url, headers={"Authorization": f"Bearer {token}"})
 
@@ -272,7 +272,7 @@ def run_audit(html_file: str):
         subset.to_csv(file_path, index=False)
         print(f"Successfully generated report: {file_path} ({len(subset)} row(s))")
 
-def parse_args():
+def parse_args() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         description = "Compare the All of Us Researcher Workbench access report against the UCL tracker."
     )
