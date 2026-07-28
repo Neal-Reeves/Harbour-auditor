@@ -20,7 +20,6 @@ NAME_COLUMN = 1
 EMAIL_COLUMN = 4
 PROJECT_END_COLUMN = 11
 SUPERVISOR_NAME_COLUMN = 3
-SUPERVISOR_EMAIL_COLUMN = None
 
 #Determine file path for output CSVs. Default is to write to ./outputs/audit_tables.
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -41,8 +40,6 @@ session = requests.Session()
 class PortalUser:
     name: str
     email: str
-    active_workspaces: int = 0
-    controlled_tier_access: bool = False
 
 @dataclass
 class TrackerUser:
@@ -240,7 +237,6 @@ def fetch_employment_status(email: str, token: str) -> Tuple[str, bool]:
 
 def batch_check_ucl_status(emails: list) -> dict[str, Any]:
     token = get_api_token()
-    # Adjust max_workers (10-20 is usually a safe sweet spot without hitting rate limits)
     with ThreadPoolExecutor(max_workers=10) as executor:
         futures = [executor.submit(fetch_employment_status, email, token) for email in emails]
         results = [f.result() for f in futures]
