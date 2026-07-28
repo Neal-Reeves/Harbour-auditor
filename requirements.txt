@@ -4,3 +4,4 @@ python-dotenv
 openpyxl
 office365-rest-python-client
 requests
+lxml

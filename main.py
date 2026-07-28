@@ -83,7 +83,7 @@ def all_of_us_parser(html_file_path):
     response = requests.get(html_file_path)
     response .raise_for_status()
 
-    soup = BeautifulSoup(response.text, "html.parser")
+    soup = BeautifulSoup(response.text, "lxml")
 
     users = []
 
