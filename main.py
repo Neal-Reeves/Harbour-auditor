@@ -34,6 +34,7 @@ PERSON_API_CLIENT_SECRET = os.environ.get("PERSON_API_CLIENT_SECRET")
 PERSON_API_TARGET_CLIENT_ID = os.environ.get("PERSON_API_TARGET_CLIENT_ID")
 
 _token_cache = {}
+session = requests.Session()
 
 @dataclass
 class PortalUser:
@@ -145,7 +146,6 @@ def compare_user_lists(source_table, tracker_table):
 def generate_audit_outputs(audit_df, employment_map):
     today = pd.to_datetime("today")
     outputs = []
-    session = requests.Session()
 
     for index, row in audit_df.iterrows():
         name = row.get("name_x") if pd.notna(row.get("name_x")) else row.get("name_y")
@@ -231,8 +231,7 @@ def get_api_token():
     }
     return payload["access_token"]
 
-def request_affiliation(session, user_email):
-    token = get_api_token()
+def request_affiliation(session, token, user_email):
     request_url = PERSON_API_URL + f"person?email={user_email}"
     response = session.get(request_url, headers={"Authorization": f"Bearer {token}"})
 
@@ -252,20 +251,23 @@ def still_at_ucl(user_json):
 
     return any(assoc.get("currency") != 3 for assoc in associations)
 
-def fetch_employment_status(email):
+def fetch_employment_status(email, token):
     if not email or pd.isna(email):
         return (email, False)
     
     try:
-        data = request_affiliation(email)
+        data = request_affiliation(session, token, email)
         return (email, still_at_ucl(data))
     except Exception:
         return (email, False)
 
-def batch_check_ucl_status(emails: list[str]) -> dict[str, bool]:
+def batch_check_ucl_status(emails):
+    token = get_api_token()
     # Adjust max_workers (10-20 is usually a safe sweet spot without hitting rate limits)
     with ThreadPoolExecutor(max_workers=10) as executor:
-        results = executor.map(fetch_employment_status, emails)
+        futures = [executor.submit(fetch_employment_status, email, token) for email in emails]
+        results = [f.result() for f in futures]
+
     return dict(results)
 
 def parse_args():
