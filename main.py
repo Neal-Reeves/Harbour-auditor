@@ -6,7 +6,7 @@ import time
 from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass, asdict
 from datetime import date
-from typing import Any, Optional
+from typing import Any, Optional, Tuple
 
 from bs4 import BeautifulSoup
 from dotenv import load_dotenv
@@ -215,6 +215,7 @@ def request_affiliation(session: requests.Session, token: str, user_email: str) 
     return response.json()
 
 def still_at_ucl(user_json: dict) -> bool:
+    #Confirms whether a user has one or more active UCL affiliations
     person_collection = (user_json or {}).get("person_collection", [])
 
     associations = []
@@ -224,9 +225,10 @@ def still_at_ucl(user_json: dict) -> bool:
     if not associations: 
         return False
 
+    #Returns true if any association has a currency other than 3 (i.e., present or future affiliation)
     return any(assoc.get("currency") != 3 for assoc in associations)
 
-def fetch_employment_status(email: str, token) -> str | bool:
+def fetch_employment_status(email: str, token: str) -> Tuple[str, bool]:
     if not email or pd.isna(email):
         return (email, False)
     
@@ -236,7 +238,7 @@ def fetch_employment_status(email: str, token) -> str | bool:
     except Exception:
         return (email, False)
 
-def batch_check_ucl_status(emails: list) -> dict:
+def batch_check_ucl_status(emails: list) -> dict[str, Any]:
     token = get_api_token()
     # Adjust max_workers (10-20 is usually a safe sweet spot without hitting rate limits)
     with ThreadPoolExecutor(max_workers=10) as executor:
