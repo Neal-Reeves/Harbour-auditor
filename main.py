@@ -96,8 +96,6 @@ def all_of_us_parser(html_file_path: str) -> pd.DataFrame:
             user_obj = PortalUser(
                 name = cells[0].get_text(strip=True).strip("'\""),
                 email = cells[1].get_text(strip=True).strip("'\""),
-                active_workspaces=int(cells[2].get_text(strip=True)) if cells[2].get_text(strip=True).isdigit() else 0,
-                controlled_tier_access=cells[3].get_text(strip=True) == "X"
             )
         
             users.append(user_obj)
@@ -245,8 +243,14 @@ def batch_check_ucl_status(emails: list) -> dict[str, Any]:
 
 def run_audit(html_file: str) -> None:
     os.makedirs(OUTPUT_DIR, exist_ok=True)
-    all_of_us_users = all_of_us_parser(html_file)
-    tracker = open_tracker()
+
+    with ThreadPoolExecutor(max_workers=2) as executor:
+        future_aou = executor.submit(all_of_us_parser, html_file)
+        future_tracker = executor.submit(open_tracker)
+        
+        all_of_us_users = future_aou.result()
+        tracker = future_tracker.result()
+
     tracker_users = extract_tracker_users(tracker)
     audit_frame = compare_user_lists(all_of_us_users, tracker_users)
 
