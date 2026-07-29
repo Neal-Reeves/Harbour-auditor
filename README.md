@@ -5,7 +5,7 @@
 
 This script automatically compares access logs (formatted as an HTML file) with an Excel format (*.xlsx*) workbook tracker stored on the UCL SharePoint. The script extracts user details from the HTML logs via scraping (using BeautifulSoup) and also downloads the tracker content from the workbook using the Office365-REST-Python-Client package. Because the tracker contains sensitive data, the script uses the io.BytesIO module. This is an in-memory binary buffer and ensures that rather than being written to a temporary file, the parsed and classified auditt outputs are written to CSV, but the tracker content is not.
 
-Matching is performed based on user email. It is therefore assumed that the lead applicant's email in the tracker will match their email in the access logs.  
+Matching is performed based on user email. It is therefore assumed that the lead applicant's email in the tracker will match their email in the access logs. Users without an email will be flagged for manual consideration.
 
 The script produces four CSV files and an optional fifth CSV file:
 1. approved_users.csv -- users who appear in the tracker workbook. These are approved users for whom no action is required. Please note: users who appear in this CSV may not necessarily have access to the All of Us project workbench.
@@ -45,8 +45,15 @@ Files are written to ./Outputs/audit_tables. These folders will be created if th
 2. Navigate to the `Harbour Auditor` folder.
 3. Run `Python main.py "URL"` where URL should be replaced with the URL for the monthly access report.
 
-## Authors
+## Contact
+Neal Reeves - Author. Contact via Slack for issues or access requests.
 
 ## Version History
 
+| Number | Date | Description |
+| ------ | ---- | ----------- |
+| **v1.0** | 29/07/2026 | Initial release. Compares All of Us Workbench access reports against SharePoint tracker and cross-references results with UCL Person API to assess current affiliation |
+
 ## License
+
+Internal UCL ARC tool. Not licensed for external use or distribution. 
