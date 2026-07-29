@@ -161,6 +161,8 @@ def generate_audit_outputs(audit_df: pd.DataFrame, employment_map: dict[str, boo
 
             if merge_status == "left_only":
                 status = "Ineligible"
+            elif is_active is None:
+                status = "Flag"
             elif not is_active:
                 status = "Left UCL"
             elif pd.notna(row.get("project_end_date")) and row["project_end_date"] < today:
@@ -223,15 +225,15 @@ def still_at_ucl(user_json: dict) -> bool:
     #Returns true if any association has a currency other than 3 (i.e., present or future affiliation)
     return any(assoc.get("currency") != 3 for assoc in associations)
 
-def fetch_employment_status(email: str, token: str) -> Tuple[str, bool]:
+def fetch_employment_status(email: str, token: str) -> Tuple[str, Optional[bool]]:
     if not email or pd.isna(email):
-        return (email, False)
+        return (email, None)
     
     try:
         data = request_affiliation(session, token, email)
         return (email, still_at_ucl(data))
     except Exception:
-        return (email, False)
+        return (email, None)
 
 def batch_check_ucl_status(emails: list) -> dict[str, Any]:
     token = get_api_token()
@@ -270,6 +272,10 @@ def run_audit(html_file: str) -> None:
 
     for status, filename in status_for_filenames.items():
         subset = output_df[output_df["status"] == status]
+
+        if subset.empty and status == "Flag":
+            print("No flagged users: flagged_users.csv will not be generated.")
+
         file_path = os.path.join(OUTPUT_DIR, filename)
         subset.to_csv(file_path, index=False)
         print(f"Successfully generated report: {file_path} ({len(subset)} row(s))")
