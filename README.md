@@ -3,12 +3,12 @@
 
 ## Description
 
-This script automatically compares access logs (formatted as an HTML file) with an Excel format (*.xlsx*) workbook tracker stored on the UCL SharePoint. The script extracts user details from the HTML logs via scraping (using BeautifulSoup) and also downloads the tracker content from the workbook using the Office365-REST-Python-Client package. Because the tracker contains sensitive data, the script uses the io.BytesIO module. This is an in-memory binary buffer and ensures that rather than being written to a temporary file, the parsed and classified aut outputs are written to CSV, but the tracker content is not.
+This script automatically compares access logs (formatted as an HTML file) with an Excel format (*.xlsx*) workbook tracker stored on the UCL SharePoint. The script extracts user details from the HTML logs via scraping (using BeautifulSoup) and also downloads the tracker content from the workbook using the Office365-REST-Python-Client package. Because the tracker contains sensitive data, the script uses the io.BytesIO module. This is an in-memory binary buffer and ensures that rather than being written to a temporary file, the parsed and classified auditt outputs are written to CSV, but the tracker content is not.
 
 Matching is performed based on user email. It is therefore assumed that the lead applicant's email in the tracker will match their email in the access logs.  
 
 The script produces four CSV files and an optional fifth CSV file:
-1. approved_users.csv -- users who appear in both the tracker workbook and the HTML access report. These are approved users for whom no action is required.
+1. approved_users.csv -- users who appear in the tracker workbook. These are approved users for whom no action is required. Please note: users who appear in this CSV may not necessarily have access to the All of Us project workbench.
 2. expired_projects.csv -- users who appear in the tracker for whom the project end date has passed. These are approved users who should know longer require access to All of Us.
 3. ineligible_users.csv -- users who appear in the HTML access report and who do not appear in the tracker. These users may be assumed to be ineligible and their access permissions should be updated.
 4. left_ucl.csv -- users who appear in the tracker who do not have an active affiliation with UCL. These users' access permissions should be updated.
