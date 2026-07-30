@@ -246,7 +246,9 @@ def fetch_employment_status(email: str, token: str) -> Tuple[str, Optional[bool]
         return (email, None)
 
 def batch_check_ucl_status(emails: list) -> dict[str, Any]:
+    #Performs parallel API requests for employment status. 
     token = get_api_token()
+    #max_workers exceeding 10 risks rate limit and unintended results.
     with ThreadPoolExecutor(max_workers=10) as executor:
         futures = [executor.submit(fetch_employment_status, email, token) for email in emails]
         results = [f.result() for f in futures]
@@ -254,6 +256,13 @@ def batch_check_ucl_status(emails: list) -> dict[str, Any]:
     return dict(results)
 
 def run_audit(html_file: str) -> None:
+    """
+    Run user audit comparing All of Us workbench logs with SharePoint tracker.
+
+    Scrapes portal user log and streams SharePoint tracker concurrently, compares users based on email address, checks UCL affiliation status via API and produces 4 (plus optional 5th) CSVs to output folder.
+    
+    Requires argument: html_file -- URL or path to the All of Us portal HTML log file.
+    """
     os.makedirs(OUTPUT_DIR, exist_ok=True)
 
     with ThreadPoolExecutor(max_workers=2) as executor:
@@ -303,12 +312,6 @@ def parse_args() -> argparse.Namespace:
         "log_url",
         default = None,
         help = "URL for All of Us access logs."
-    )
-
-    parser.add_argument(
-        "--dataset-name",
-        default="All of Us",
-        help = "Name of dataset for comparison."
     )
 
     return parser.parse_args()
