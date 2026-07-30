@@ -21,6 +21,14 @@ EMAIL_COLUMN = "Lead applicant email"
 PROJECT_END_COLUMN = "End date"
 SUPERVISOR_NAME_COLUMN = "Supervising researcher full name"
 
+TRACKER_COLUMN_RENAME = {
+    NAME_COLUMN: "name",
+    EMAIL_COLUMN: "email",
+    PROJECT_END_COLUMN: "project_end_date",
+    SUPERVISOR_NAME_COLUMN: "supervisor_name"
+
+}
+
 #Determine file path for output CSVs. Default is to write to ./outputs/audit_tables.
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 OUTPUT_DIR = os.path.join(BASE_DIR, "outputs", "audit_tables")
@@ -103,15 +111,17 @@ def all_of_us_parser(html_file_path: str) -> pd.DataFrame:
     return pd.DataFrame(users)
 
 def extract_tracker_users(tracker: pd.ExcelFile) -> pd.DataFrame:
-    tracker_users = []
-    for index, row in tracker.iterrows():
-        row_obj = TrackerUser(
-            name = row[NAME_COLUMN],
-            email = row[EMAIL_COLUMN],
-            project_end_date = row[PROJECT_END_COLUMN],
-            supervisor_name = row[SUPERVISOR_NAME_COLUMN],
+    renamed = tracker.rename(columns=TRACKER_COLUMN_RENAME)
+
+    tracker_users = [
+        TrackerUser(
+            name = row.name,
+            email = row.email,
+            project_end_date = row.project_end_date,
+            supervisor_name = row.supervisor_name
         )
-        tracker_users.append(row_obj)
+        for row in renamed.itertuples(index=False)
+    ]
     
     return pd.DataFrame(tracker_users)
 
@@ -138,15 +148,15 @@ def generate_audit_outputs(audit_df: pd.DataFrame, employment_map: dict[str, boo
     today = pd.to_datetime("today")
     outputs = []
 
-    for index, row in audit_df.iterrows():
-        name = row.get("name_x") if pd.notna(row.get("name_x")) else row.get("name_y")
+    audit_df = audit_df.rename(columns={"_merge": "merge_status"})
 
-        email = row.get("email")
-
-        raw_date = row.get("project_end_date_raw")
+    for row in audit_df.itertuples(index=False):
+        name = row.name_x if pd.notna(row.name_x) else row.name_y
+        email = row.email
+        raw_date = row.project_end_date_raw
 
         has_unparsed_date = (
-            pd.isna(row.get("project_end_date")) and 
+            pd.isna(row.project_end_date) and 
             pd.notna(raw_date) and
             str(raw_date).strip().lower() != "open"
         )
@@ -157,7 +167,7 @@ def generate_audit_outputs(audit_df: pd.DataFrame, employment_map: dict[str, boo
             status = "Flag"
         else:
             is_active = employment_map.get(email, False)
-            merge_status = row.get("_merge")
+            merge_status = row.merge_status
 
             if merge_status == "left_only":
                 status = "Ineligible"
@@ -165,7 +175,7 @@ def generate_audit_outputs(audit_df: pd.DataFrame, employment_map: dict[str, boo
                 status = "Flag"
             elif not is_active:
                 status = "Left UCL"
-            elif pd.notna(row.get("project_end_date")) and row["project_end_date"] < today:
+            elif pd.notna(row.project_end_date) and row.project_end_date < today:
                 status = "Project Expired"
             else:
                 status = "Approved"
@@ -174,7 +184,7 @@ def generate_audit_outputs(audit_df: pd.DataFrame, employment_map: dict[str, boo
             name=name,
             email=email,
             status=status,
-            supervisor_name=row.get("supervisor_name")
+            supervisor_name=row.supervisor_name
         ))
 
     return pd.DataFrame([asdict(o) for o in outputs])
@@ -252,13 +262,17 @@ def run_audit(html_file: str) -> None:
         
         all_of_us_users = future_aou.result()
         tracker = future_tracker.result()
+    print("Data streamed. Extracting user data from tracker.")
 
     tracker_users = extract_tracker_users(tracker)
+    print("Tracker_users extracted. Commencing comparison.")
+
     audit_frame = compare_user_lists(all_of_us_users, tracker_users)
+    print("Comparison_conmplete. Confirming employment status for tracker users.")
 
     unique_emails = audit_frame["email"].dropna().unique().tolist()
-
     employment_map = batch_check_ucl_status(unique_emails)
+    print("Writing outputs.")
 
     output_df = generate_audit_outputs(audit_frame, employment_map)
 
